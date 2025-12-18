@@ -1,0 +1,1120 @@
+/*
+  =======================================================================
+  i3T4AN (Ethan Blair)
+  Project:      StreamDock
+  File:         Video player styles - Fullscreen player with custom controls
+  =======================================================================
+*/
+
+/* ===========================================
+   Fullscreen Modal Overlay
+   =========================================== */
+.player-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #000;
+    display: flex;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.player-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.player-modal {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    background: #000;
+}
+
+/* ===========================================
+   Video Container
+   =========================================== */
+.player-container {
+    flex: 1;
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.player-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Poster overlay before play */
+.player-poster {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.player-poster::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.player-poster-play {
+    position: relative;
+    z-index: 1;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.player-poster-play:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 40px var(--accent);
+}
+
+/* ===========================================
+   Custom Controls Bar
+   =========================================== */
+.video-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--space-4) var(--space-6);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.95));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+}
+
+.player-container:hover .video-controls,
+.player-container.controls-visible .video-controls {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+/* Progress Bar (Seekable) */
+.video-progress-wrapper {
+    width: 100%;
+    padding: var(--space-2) 0;
+}
+
+.video-progress {
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    position: relative;
+    transition: height 0.15s ease;
+}
+
+.video-progress:hover {
+    height: 8px;
+}
+
+.video-progress-buffered {
+    position: absolute;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
+    pointer-events: none;
+}
+
+.video-progress-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: var(--radius-full);
+    position: relative;
+    transition: width 0.1s linear;
+}
+
+.video-progress-handle {
+    position: absolute;
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%) scale(0);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    transition: transform 0.15s ease;
+}
+
+.video-progress:hover .video-progress-handle {
+    transform: translateY(-50%) scale(1);
+}
+
+/* Preview tooltip */
+.video-progress-preview {
+    position: absolute;
+    bottom: 20px;
+    transform: translateX(-50%);
+    padding: var(--space-1) var(--space-2);
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    color: #fff;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.video-progress:hover .video-progress-preview {
+    opacity: 1;
+}
+
+/* Controls Row */
+.video-controls-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.video-controls-left,
+.video-controls-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.video-controls-center {
+    flex: 1;
+}
+
+/* Control Buttons */
+.video-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: var(--text-xl);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.video-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.video-btn.active {
+    color: var(--accent);
+}
+
+.video-btn-lg {
+    width: 50px;
+    height: 50px;
+    font-size: var(--text-2xl);
+}
+
+/* Time Display */
+.video-time {
+    font-size: var(--text-sm);
+    color: rgba(255, 255, 255, 0.9);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+
+.video-time-separator {
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0 var(--space-1);
+}
+
+/* Volume Control */
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.volume-slider {
+    width: 0;
+    opacity: 0;
+    transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+.volume-control:hover .volume-slider {
+    width: 80px;
+    opacity: 1;
+}
+
+.volume-slider input[type="range"] {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
+    appearance: none;
+    cursor: pointer;
+}
+
+.volume-slider input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+}
+
+/* Quality Selector */
+.quality-selector {
+    position: relative;
+}
+
+.quality-menu {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: var(--space-2);
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2);
+    min-width: 120px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.2s ease;
+}
+
+.quality-selector:hover .quality-menu,
+.quality-menu:hover {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.quality-option {
+    display: block;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: var(--text-sm);
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s ease;
+}
+
+.quality-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.quality-option.active {
+    color: var(--accent);
+}
+
+/* ===========================================
+   Episode List Sidebar (TV)
+   =========================================== */
+.episode-sidebar {
+    width: 320px;
+    background: var(--bg-secondary);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.episode-sidebar.open {
+    transform: translateX(0);
+}
+
+.episode-sidebar-header {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.episode-sidebar-title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.episode-sidebar-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: var(--text-xl);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: background 0.15s ease;
+}
+
+.episode-sidebar-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.episode-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-2);
+}
+
+.episode-item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.episode-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.episode-item.active {
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid var(--accent);
+}
+
+.episode-thumbnail {
+    width: 120px;
+    aspect-ratio: 16/9;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.episode-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.episode-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.episode-number {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    margin-bottom: var(--space-1);
+}
+
+.episode-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.episode-duration {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+}
+
+/* ===========================================
+   Hide Controls on Idle
+   =========================================== */
+.player-container.idle .video-controls {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+}
+
+.player-container.idle {
+    cursor: none;
+}
+
+/* ===========================================
+   Player Header (Close, Title)
+   =========================================== */
+.player-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: var(--space-4) var(--space-6);
+    background: linear-gradient(rgba(0, 0, 0, 0.95), transparent);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.player-container:hover .player-header,
+.player-container.controls-visible .player-header {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+.player-container.idle .player-header {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+}
+
+.player-close {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: var(--radius-full);
+    color: #fff;
+    font-size: var(--text-xl);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.player-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.player-title {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: #fff;
+    flex: 1;
+}
+
+.player-subtitle {
+    font-size: var(--text-sm);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* ===========================================
+   Loading State
+   =========================================== */
+.player-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 5;
+}
+
+.player-loading .spinner {
+    width: 60px;
+    height: 60px;
+    border-width: 4px;
+}
+
+/* ===========================================
+   Responsive Design
+   =========================================== */
+@media (max-width: 1024px) {
+    .episode-sidebar {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 20;
+        width: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .player-overlay {
+        flex-direction: column;
+    }
+
+    .episode-sidebar {
+        width: 100%;
+        max-height: 40vh;
+        transform: translateY(100%);
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
+
+    .episode-sidebar.open {
+        transform: translateY(0);
+    }
+
+    .video-controls {
+        padding: var(--space-2) var(--space-4);
+    }
+
+    .video-btn {
+        width: 36px;
+        height: 36px;
+        font-size: var(--text-lg);
+    }
+
+    .video-btn-lg {
+        width: 44px;
+        height: 44px;
+    }
+
+    .volume-control:hover .volume-slider {
+        width: 60px;
+    }
+
+    .player-header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .player-title {
+        font-size: var(--text-base);
+    }
+
+    .episode-thumbnail {
+        width: 80px;
+    }
+}
+
+@media (max-width: 480px) {
+    .video-time {
+        display: none;
+    }
+
+    .quality-selector {
+        display: none;
+    }
+
+    .video-controls-row {
+        gap: var(--space-2);
+    }
+}
+
+/* ===========================================
+   Resume Popup
+   =========================================== */
+.resume-popup {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.resume-popup-content {
+    background: rgba(30, 30, 40, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    text-align: center;
+    max-width: 400px;
+    animation: scaleIn 0.2s ease;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.resume-popup-content p {
+    color: #fff;
+    font-size: var(--text-lg);
+    margin-bottom: var(--space-6);
+}
+
+.resume-popup-content strong {
+    color: var(--accent);
+}
+
+.resume-popup-buttons {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+}
+
+.resume-btn {
+    padding: var(--space-3) var(--space-6);
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.resume-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+}
+
+.resume-btn-secondary {
+    padding: var(--space-3) var(--space-6);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.resume-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* ===========================================
+   Netflix-Style Detail View
+   =========================================== */
+.detail-view {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-primary);
+    position: relative;
+}
+
+/* Header with Back Button */
+.detail-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    padding: var(--space-4);
+}
+
+.detail-back-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    color: #fff;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.detail-back-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateX(-2px);
+}
+
+.detail-back-btn span {
+    font-size: var(--text-lg);
+}
+
+.detail-view.fullscreen-mode .detail-header {
+    display: none;
+}
+
+.detail-view.fullscreen-mode .detail-metadata {
+    display: none;
+}
+
+.detail-view.fullscreen-mode .detail-player {
+    flex: 1;
+}
+
+/* Metadata Panel (Left Side) */
+.detail-metadata {
+    width: 45%;
+    min-width: 400px;
+    max-width: 600px;
+    height: 100%;
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 300px;
+    background-size: cover;
+    background-position: center top;
+    z-index: 0;
+}
+
+.detail-backdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom,
+            rgba(10, 10, 15, 0.3) 0%,
+            rgba(10, 10, 15, 0.7) 50%,
+            var(--bg-primary) 100%);
+}
+
+.detail-content {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-8);
+    padding-top: 200px;
+    flex: 1;
+}
+
+.detail-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: var(--space-3);
+    line-height: 1.1;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.detail-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+    flex-wrap: wrap;
+}
+
+.detail-rating {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    background: rgba(255, 193, 7, 0.15);
+    color: #ffc107;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+}
+
+.detail-rating-star {
+    font-size: var(--text-lg);
+}
+
+.detail-year,
+.detail-runtime,
+.detail-seasons {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+}
+
+.detail-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+}
+
+.detail-genre {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 500;
+}
+
+.detail-tagline {
+    font-size: var(--text-lg);
+    font-style: italic;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-4);
+}
+
+.detail-overview {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: var(--space-6);
+    font-size: var(--text-base);
+}
+
+.detail-creator {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-6);
+}
+
+.detail-creator strong {
+    color: var(--text-primary);
+}
+
+/* Episode Selector */
+.episode-selector {
+    margin-bottom: var(--space-6);
+    padding: var(--space-4);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+}
+
+.episode-selector-title {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-3);
+}
+
+.episode-selector-controls {
+    display: flex;
+    gap: var(--space-3);
+}
+
+.episode-select {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.episode-select:hover {
+    border-color: var(--accent);
+}
+
+.episode-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.episode-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* Cast Section */
+.detail-cast-section {
+    margin-top: var(--space-6);
+}
+
+.detail-cast-title {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-4);
+}
+
+.detail-cast-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: var(--space-3);
+}
+
+.detail-cast-item {
+    text-align: center;
+}
+
+.detail-cast-photo {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto var(--space-2);
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.detail-cast-photo:hover {
+    transform: scale(1.1);
+    border-color: var(--accent);
+}
+
+.detail-cast-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.detail-cast-photo-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-2xl);
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+}
+
+.detail-cast-name {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.detail-cast-character {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Player Panel (Right Side) */
+.detail-player {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    position: relative;
+}
+
+.detail-player-actions {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    z-index: 10;
+    display: flex;
+    gap: var(--space-2);
+}
+
+.detail-fullscreen-btn {
+    padding: var(--space-2) var(--space-4);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    color: #fff;
+    font-size: var(--text-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    transition: background 0.2s ease;
+}
+
+.detail-fullscreen-btn:hover {
+    background: rgba(99, 102, 241, 0.8);
+}
+
+/* Responsive Detail View */
+@media (max-width: 1024px) {
+    .detail-view {
+        flex-direction: column;
+    }
+
+    .detail-metadata {
+        width: 100%;
+        max-width: none;
+        min-width: auto;
+        max-height: 50vh;
+    }
+
+    .detail-content {
+        padding: var(--space-4);
+        padding-top: 150px;
+    }
+
+    .detail-backdrop {
+        height: 200px;
+    }
+
+    .detail-title {
+        font-size: 1.75rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .detail-metadata {
+        max-height: 60vh;
+    }
+
+    .detail-cast-grid {
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    }
+
+    .detail-cast-photo {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* ===========================================
+   Reduced Motion
+   =========================================== */
+@media (prefers-reduced-motion: reduce) {
+
+    .video-controls,
+    .player-header,
+    .episode-sidebar,
+    .video-progress-handle,
+    .quality-menu,
+    .resume-popup,
+    .resume-popup-content {
+        transition: none;
+        animation: none;
+    }
+}
