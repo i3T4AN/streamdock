@@ -1,0 +1,116 @@
+#===============================================
+# i3T4AN (Ethan Blair) - StreamDock
+# Project:      StreamDock
+# File:         Docker Compose orchestration
+# Run with: docker-compose up -d
+#===============================================
+# Media folder: ~/Documents/StreamDockMedia/
+#   - downloads/    : Downloaded media files (add your own media here!)
+#   - transcoded/   : Transcoded files for streaming
+#   - database/     : PostgreSQL data
+#   - qbittorrent/  : qBittorrent config
+
+services:
+  # FastAPI Backend Application
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: streamdock-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - TMDB_API_KEY=${TMDB_API_KEY}
+      - QBIT_HOST=qbittorrent
+      - QBIT_PORT=8080
+      - QBIT_USERNAME=${QBIT_USERNAME}
+      - QBIT_PASSWORD=${QBIT_PASSWORD}
+      - SECRET_KEY=${SECRET_KEY}
+      - SERVER_IP=${SERVER_IP:-}
+    volumes:
+      - ./frontend:/app/frontend:ro
+      - streamdock-downloads:/downloads
+      - streamdock-transcoded:/transcoded
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qbittorrent:
+        condition: service_started
+    networks:
+      - streamdock-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # qBittorrent Torrent Client
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: streamdock-qbittorrent
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+      - WEBUI_PORT=8080
+    ports:
+      - "8080:8080" # WebUI
+      - "6881:6881" # Torrent TCP
+      - "6881:6881/udp" # Torrent UDP
+    volumes:
+      - streamdock-qbittorrent:/config
+      - streamdock-downloads:/downloads
+      - ./config/qbittorrent-init.sh:/custom-cont-init.d/01-streamdock-init.sh:ro
+      - ./config/qBittorrent.conf:/defaults/qBittorrent.conf:ro
+      - ./config/webhook.sh:/config/webhook.sh:ro
+    networks:
+      - streamdock-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: streamdock-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - streamdock-database:/var/lib/postgresql/data
+    networks:
+      - streamdock-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+# Docker Network
+networks:
+  streamdock-network:
+    driver: bridge
+    name: streamdock-network
+
+# Docker Named Volumes (auto-created by Docker)
+volumes:
+  streamdock-downloads:
+  streamdock-transcoded:
+  streamdock-database:
+  streamdock-qbittorrent:
