@@ -1,0 +1,26 @@
+# =======================================================================
+# i3T4AN (Ethan Blair)
+# Project:      StreamDock
+# File:         Python dependencies
+# =======================================================================
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Database
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# External APIs
+qbittorrent-api>=2024.2.59
+httpx==0.26.0
+
+# Utilities
+python-dotenv==1.0.0
+python-multipart==0.0.6
+guessit==3.8.0
+
+# Async Support
+aiofiles==23.2.1
