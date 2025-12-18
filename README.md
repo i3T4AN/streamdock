@@ -13,6 +13,8 @@
 
 **StreamDock** is a fully containerized media platform that combines torrent downloading with a Netflix-style streaming interface. Download media via magnet links, let it automatically fetch metadata and transcode to browser-compatible formats, then stream directly from your browser.
 
+**Ethan You're a Lazy piece of %&^$** I hear you say - Yes I reused the same UI as the [Vector Knowledge Base](https://github.com/i3T4AN/Vector-Knowledge-Base) and my [Portfolio Website](https://i3t4an.github.io/), It saved me like 5 hours on designing, I like the design, and if it **Ain't broke don't fix it ¯\_(ツ)_/¯**
+
 ## Features
 
 - **Netflix-Style Library** - Browse your media collection with auto-fetched posters and metadata from TMDB
