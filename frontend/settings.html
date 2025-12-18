@@ -1,0 +1,163 @@
+<!--===================================== 
+  i3T4AN (Ethan Blair)
+  Project:      StreamDock
+  File:         Settings page
+=======================================-->
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings — StreamDock</title>
+    <meta name="description" content="StreamDock: Configure your media server settings." />
+
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+</head>
+
+<body class="theme-dark">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!-- Header -->
+    <header role="banner">
+        <div class="container nav">
+            <a href="/" class="brand">
+                <h1>StreamDock</h1>
+                <p>Personal Media Server</p>
+            </a>
+            <nav class="nav-links" aria-label="Main navigation">
+                <a href="/" class="nav-btn">
+                    <span class="nav-icon emoji">📚</span> Library
+                </a>
+                <a href="/downloads.html" class="nav-btn">
+                    <span class="nav-icon emoji">⬇️</span> Downloads
+                </a>
+                <a href="/settings.html" class="nav-btn active">
+                    <span class="nav-icon emoji">⚙️</span> Settings
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main">
+        <div class="container">
+            <div class="hero">
+                <h2>Settings</h2>
+                <p>Configure StreamDock</p>
+            </div>
+
+            <div class="settings-grid">
+                <div class="settings-card">
+                    <h4><span class="emoji">🎨</span> Appearance</h4>
+                    <div class="setting-item">
+                        <label class="setting-label" for="themeSetting">Theme</label>
+                        <select id="themeSetting" class="input">
+                            <option value="dark">Dark</option>
+                            <option value="light">Light</option>
+                            <option value="system">System</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4><span class="emoji">🔗</span> Connections</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">qBittorrent</span>
+                        <span class="badge" id="qbitStatus">Checking...</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Database</span>
+                        <span class="badge" id="dbStatus">Checking...</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">TMDB</span>
+                        <span class="badge" id="tmdbStatus">Checking...</span>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4><span class="emoji">📁</span> Library</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">Downloads Path</span>
+                        <code class="setting-value">/downloads/completed</code>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Transcoded Path</span>
+                        <code class="setting-value">/transcoded</code>
+                    </div>
+                    <button class="btn" id="rescanLibrary"><span class="emoji">🔄</span> Rescan Library</button>
+                </div>
+
+                <div class="settings-card">
+                    <h4><span class="emoji">⚡</span> Transcoding</h4>
+                    <div class="setting-item">
+                        <label class="setting-label" for="qualitySetting">Default Quality</label>
+                        <select id="qualitySetting" class="input">
+                            <option value="1080p">1080p</option>
+                            <option value="720p">720p</option>
+                            <option value="480p">480p</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label class="setting-label" for="maxJobsSetting">Max Concurrent Jobs</label>
+                        <input type="number" id="maxJobsSetting" class="input" value="1" min="1" max="4">
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4><span class="emoji">🌐</span> Network Access</h4>
+                    <div class="network-access-content">
+                        <div id="qrCode" class="qr-code"></div>
+                        <div class="network-info">
+                            <code class="setting-value" id="networkUrl">Loading...</code>
+                            <p class="setting-hint">Scan with your phone to access StreamDock on the same network.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h4><span class="emoji">ℹ️</span> About</h4>
+                    <div class="setting-item">
+                        <span class="setting-label">Version</span>
+                        <span class="setting-value" id="appVersion">0.1.0</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Developer</span>
+                        <a href="https://github.com/i3t4an" target="_blank" class="link">i3t4an</a>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">Released</span>
+                        <span class="setting-value">December 2025</span>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">API Docs</span>
+                        <a href="/docs" target="_blank" class="link">Open Swagger UI →</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn btn-primary" id="saveSettings">Save Settings</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Status indicator -->
+    <div id="status" class="sr-only" role="status" aria-live="polite"></div>
+
+    <!-- Scripts -->
+    <script src="/js/qrcode.min.js"></script>
+    <script src="/js/api.js" defer></script>
+    <script src="/js/settings.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,112 @@
+<!--===================================== 
+  i3T4AN (Ethan Blair)
+  Project:      StreamDock
+  File:         Library page
+=======================================-->
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Library — StreamDock</title>
+    <meta name="description"
+        content="StreamDock: Self-hosted media streaming platform with torrent management and on-the-fly transcoding." />
+
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/library.css">
+    <link rel="stylesheet" href="/css/player.css">
+</head>
+
+<body class="theme-dark">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!-- Header -->
+    <header role="banner">
+        <div class="container nav">
+            <a href="/" class="brand">
+                <h1>StreamDock</h1>
+                <p>Personal Media Server</p>
+            </a>
+            <nav class="nav-links" aria-label="Main navigation">
+                <a href="/" class="nav-btn active">
+                    <span class="nav-icon emoji">📚</span> Library
+                </a>
+                <a href="/downloads.html" class="nav-btn">
+                    <span class="nav-icon emoji">⬇️</span> Downloads
+                </a>
+                <a href="/settings.html" class="nav-btn">
+                    <span class="nav-icon emoji">⚙️</span> Settings
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main">
+        <div class="container">
+            <div class="hero">
+                <h2>Your Media Library</h2>
+                <p>Browse and stream your movies and TV shows</p>
+            </div>
+
+            <div class="controls">
+                <div class="filters" id="libraryFilters">
+                    <button class="chip active" data-filter="all" aria-pressed="true">All</button>
+                    <button class="chip" data-filter="movies" aria-pressed="false">Movies</button>
+                    <button class="chip" data-filter="shows" aria-pressed="false">TV Shows</button>
+                    <button class="chip" data-filter="recent" aria-pressed="false">Recently Added</button>
+                </div>
+                <div class="search-box">
+                    <input type="search" id="librarySearch" class="input" placeholder="Search library..."
+                        autocomplete="off">
+                </div>
+                <button class="btn btn-primary" id="scanLibrary">
+                    <span class="emoji">🔄</span> Scan Library
+                </button>
+            </div>
+
+            <div id="libraryGrid" class="media-grid">
+                <!-- Media cards populated by JS -->
+            </div>
+
+            <div class="empty-state" id="libraryEmpty">
+                <div class="empty-state-icon emoji">🎬</div>
+                <h3 class="empty-state-title">No media found</h3>
+                <p class="empty-state-description">Add some torrents to get started, or scan your library.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Video Player Modal -->
+    <div id="playerModal" class="player-overlay" hidden>
+        <div class="player-container">
+            <div class="player-header">
+                <button class="player-close" id="playerClose">&times;</button>
+                <div class="player-title" id="playerTitle">Now Playing</div>
+            </div>
+            <video id="videoPlayer" controls autoplay>
+                <source id="videoSource" src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Status indicator -->
+    <div id="status" class="sr-only" role="status" aria-live="polite"></div>
+
+    <!-- Scripts -->
+    <script src="/js/api.js" defer></script>
+    <script src="/js/library.js" defer></script>
+    <script src="/js/player.js" defer></script>
+</body>
+
+</html>

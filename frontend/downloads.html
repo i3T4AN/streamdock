@@ -1,0 +1,133 @@
+<!--=====================================
+  i3T4AN (Ethan Blair)
+  Project:      StreamDock
+  File:         Downloads page
+=======================================-->
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Downloads — StreamDock</title>
+    <meta name="description" content="StreamDock: Manage your torrents and downloads." />
+
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/downloads.css">
+</head>
+
+<body class="theme-dark">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <!-- Header -->
+    <header role="banner">
+        <div class="container nav">
+            <a href="/" class="brand">
+                <h1>StreamDock</h1>
+                <p>Personal Media Server</p>
+            </a>
+            <nav class="nav-links" aria-label="Main navigation">
+                <a href="/" class="nav-btn">
+                    <span class="nav-icon emoji">📚</span> Library
+                </a>
+                <a href="/downloads.html" class="nav-btn active">
+                    <span class="nav-icon emoji">⬇️</span> Downloads
+                </a>
+                <a href="/settings.html" class="nav-btn">
+                    <span class="nav-icon emoji">⚙️</span> Settings
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main">
+        <div class="container">
+            <div class="hero">
+                <h2>Downloads</h2>
+                <p>Manage your torrents and downloads</p>
+            </div>
+
+            <div class="controls">
+                <div class="stats-bar" id="downloadStats">
+                    <div class="stat">
+                        <span class="stat-icon emoji">⬇️</span>
+                        <span class="stat-value" id="downloadSpeed">0 B/s</span>
+                        <span class="stat-label">Download</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-icon emoji">⬆️</span>
+                        <span class="stat-value" id="uploadSpeed">0 B/s</span>
+                        <span class="stat-label">Upload</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="addTorrent">
+                    <span class="emoji">➕</span> Add Torrent
+                </button>
+            </div>
+
+            <div id="torrentList" class="torrent-list">
+                <!-- Torrent items populated by JS -->
+                <div class="empty-state" id="torrentsEmpty">
+                    <div class="empty-state-icon emoji">📥</div>
+                    <h3 class="empty-state-title">No active downloads</h3>
+                    <p class="empty-state-description">Add a magnet link to start downloading.</p>
+                </div>
+            </div>
+
+            <!-- Transcode Jobs -->
+            <div class="section-header">
+                <h3>Transcode Jobs</h3>
+                <button id="clearFinishedJobs" class="btn btn-sm btn-secondary" onclick="downloads.clearFinishedJobs()"
+                    style="display: none;">
+                    <span class="emoji">🗑️</span> Clear Finished
+                </button>
+            </div>
+            <div id="transcodeJobs" class="job-list">
+                <div class="empty-state" id="jobsEmpty">
+                    <div class="empty-state-icon emoji">🔄</div>
+                    <h3 class="empty-state-title">No transcoding jobs</h3>
+                    <p class="empty-state-description">Jobs will appear here when media is being converted.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Torrent Modal -->
+    <div id="addTorrentModal" class="modal" hidden>
+        <div class="modal-backdrop" id="torrentBackdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Torrent</h3>
+                <button class="modal-close" id="torrentModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="magnetInput">Magnet Link</label>
+                    <textarea id="magnetInput" class="input" rows="3" placeholder="magnet:?xt=urn:btih:..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="cancelTorrent">Cancel</button>
+                <button class="btn btn-primary" id="submitTorrent">Add Torrent</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Status indicator -->
+    <div id="status" class="sr-only" role="status" aria-live="polite"></div>
+
+    <!-- Scripts -->
+    <script src="/js/api.js" defer></script>
+    <script src="/js/downloads.js" defer></script>
+</body>
+
+</html>
