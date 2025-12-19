@@ -12,8 +12,29 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import async_session_factory
-from models import TranscodeJob, TranscodeStatus, Media, Episode
+from models import TranscodeJob, TranscodeStatus, Media, Episode, Settings
 from transcoder import transcoder, QualityPreset
+
+
+# Map setting values to QualityPreset
+QUALITY_MAP = {
+    "480p": QualityPreset.LOW,
+    "720p": QualityPreset.MEDIUM,
+    "1080p": QualityPreset.HIGH,
+    "2160p": QualityPreset.ULTRA,
+}
+
+
+async def get_quality_preset() -> QualityPreset:
+    """Read default_quality from settings and return corresponding preset."""
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(Settings).where(Settings.key == "default_quality")
+        )
+        setting = result.scalars().first()
+        if setting and setting.value in QUALITY_MAP:
+            return QUALITY_MAP[setting.value]
+    return QualityPreset.HIGH  # Default fallback
 
 
 POLL_INTERVAL = int(os.getenv("JOB_POLL_INTERVAL", "5"))
@@ -127,10 +148,13 @@ class JobWorker:
                     def sync_progress(p):
                         asyncio.create_task(update_progress(p))
                     
+                    # Get quality setting
+                    quality_preset = await get_quality_preset()
+                    
                     output_path = await transcoder.transcode_to_mp4(
                         source=job.source_path,
                         output=job.output_path,
-                        quality=QualityPreset.HIGH,
+                        quality=quality_preset,
                         progress_callback=sync_progress
                     )
                     
@@ -187,6 +211,20 @@ class JobWorker:
         
         if status == TranscodeStatus.COMPLETE:
             job.completed_at = datetime.utcnow()
+            
+            # Update episode/media file_path to point to the transcoded MP4
+            # This ensures the path persists even if transcode jobs are cleared
+            if output_path:
+                if job.episode_id:
+                    episode = await session.get(Episode, job.episode_id)
+                    if episode:
+                        episode.file_path = output_path
+                        print(f"Updated episode {job.episode_id} file_path to: {output_path}")
+                elif job.media_id:
+                    media = await session.get(Media, job.media_id)
+                    if media:
+                        media.file_path = output_path
+                        print(f"Updated media {job.media_id} file_path to: {output_path}")
         
         await session.commit()
     

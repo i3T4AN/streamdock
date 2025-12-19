@@ -48,12 +48,13 @@ class MediaResponse(BaseModel):
     folder_path: str
     file_path: Optional[str]
     episode_count: Optional[int] = None
+    has_originals: bool = False  # True if non-MP4 originals exist alongside transcoded MP4s
     
     class Config:
         from_attributes = True
     
     @classmethod
-    def from_model(cls, m: "Media", episode_count: Optional[int] = None) -> "MediaResponse":
+    def from_model(cls, m: "Media", episode_count: Optional[int] = None, has_originals: bool = False) -> "MediaResponse":
         """Create MediaResponse from Media model."""
         from models import MediaType
         return cls(
@@ -68,6 +69,7 @@ class MediaResponse(BaseModel):
             folder_path=m.folder_path,
             file_path=m.file_path,
             episode_count=episode_count,
+            has_originals=has_originals,
         )
 
 
@@ -96,6 +98,54 @@ class ScanResponse(BaseModel):
     skipped_items: List[str]
 
 
+# Helper to check if media has replaceable originals
+TRANSCODE_EXTENSIONS = {'.mkv', '.avi', '.wmv', '.flv', '.webm', '.mov', '.m4v', '.ts', '.m2ts'}
+
+def check_has_originals(media: Media) -> bool:
+    """
+    Check if media has original non-MP4 files that can be replaced.
+    Returns True only if:
+    - Original files exist in /downloads/ with extensions needing transcode
+    - Corresponding MP4 files exist in /transcoded/
+    """
+    from pathlib import Path
+    
+    files_to_check = []
+    
+    if media.media_type == MediaType.TV:
+        # For TV shows, check episode file paths
+        for ep in media.episodes:
+            if ep.file_path:
+                files_to_check.append(ep.file_path)
+    else:
+        # For movies, check media file path
+        if media.file_path:
+            files_to_check.append(media.file_path)
+    
+    # Check if any original (non-MP4) files exist in /downloads/
+    for file_path in files_to_check:
+        path = Path(file_path)
+        ext = path.suffix.lower()
+        
+        # If file is already an MP4 in /transcoded/, check if original exists
+        if ext == '.mp4' and '/transcoded/' in str(path):
+            # Derive original path - look for any transcode extension in /downloads/
+            filename_stem = path.stem
+            for orig_ext in TRANSCODE_EXTENSIONS:
+                # Check in the folder_path for original
+                if media.folder_path:
+                    orig_path = Path(media.folder_path) / f"{filename_stem}{orig_ext}"
+                    if orig_path.exists():
+                        return True
+        elif ext in TRANSCODE_EXTENSIONS:
+            # File path points to original - check if transcoded MP4 exists
+            transcoded_path = Path('/transcoded') / f"{path.stem}.mp4"
+            if transcoded_path.exists() and Path(file_path).exists():
+                return True
+    
+    return False
+
+
 # Endpoints
 @router.get("", response_model=List[MediaResponse])
 async def list_library(
@@ -120,7 +170,7 @@ async def list_library(
     result = await db.execute(query)
     media_list = result.scalars().all()
     
-    return [MediaResponse.from_model(m, len(m.episodes) if m.media_type == MediaType.TV else None) for m in media_list]
+    return [MediaResponse.from_model(m, len(m.episodes) if m.media_type == MediaType.TV else None, check_has_originals(m)) for m in media_list]
 
 
 @router.get("/movies", response_model=List[MediaResponse])
@@ -420,4 +470,84 @@ async def delete_media(
         "status": "ok", 
         "message": f"Removed '{title}' from library",
         "files_deleted": files_deleted,
+    }
+
+
+@router.post("/{media_id}/replace-originals", response_model=dict)
+async def replace_originals(
+    media_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete original non-MP4 files after transcoding is complete.
+    Only works when transcoded MP4s exist for all files.
+    
+    - **media_id**: The media ID
+    """
+    from pathlib import Path
+    
+    query = select(Media).where(Media.id == media_id).options(selectinload(Media.episodes))
+    result = await db.execute(query)
+    media = result.scalars().first()
+    
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
+    
+    deleted_count = 0
+    deleted_files = []
+    errors = []
+    
+    # Collect all file paths to check
+    if media.media_type == MediaType.TV:
+        file_paths = [(ep.file_path, ep) for ep in media.episodes if ep.file_path]
+    else:
+        file_paths = [(media.file_path, media)] if media.file_path else []
+    
+    for file_path, record in file_paths:
+        path = Path(file_path)
+        ext = path.suffix.lower()
+        
+        # Case 1: DB points to MP4 in /transcoded/ - find and delete original in /downloads/
+        if ext == '.mp4' and '/transcoded/' in str(path):
+            filename_stem = path.stem
+            for orig_ext in TRANSCODE_EXTENSIONS:
+                if media.folder_path:
+                    orig_path = Path(media.folder_path) / f"{filename_stem}{orig_ext}"
+                    if orig_path.exists():
+                        try:
+                            orig_path.unlink()
+                            deleted_files.append(str(orig_path))
+                            deleted_count += 1
+                            print(f"Deleted original: {orig_path}")
+                        except Exception as e:
+                            errors.append(f"Failed to delete {orig_path}: {e}")
+        
+        # Case 2: DB still points to original - check if MP4 exists, then delete original
+        elif ext in TRANSCODE_EXTENSIONS:
+            transcoded_path = Path('/transcoded') / f"{path.stem}.mp4"
+            if transcoded_path.exists():
+                try:
+                    # Delete the original
+                    if path.exists():
+                        path.unlink()
+                        deleted_files.append(str(path))
+                        deleted_count += 1
+                        print(f"Deleted original: {path}")
+                    
+                    # Update DB to point to the MP4
+                    record.file_path = str(transcoded_path)
+                    print(f"Updated file_path to: {transcoded_path}")
+                except Exception as e:
+                    errors.append(f"Failed to delete {path}: {e}")
+    
+    await db.commit()
+    
+    if deleted_count == 0:
+        raise HTTPException(status_code=400, detail="No original files found to replace")
+    
+    return {
+        "status": "ok",
+        "deleted_count": deleted_count,
+        "deleted_files": deleted_files,
+        "errors": errors,
     }

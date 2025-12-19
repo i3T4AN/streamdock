@@ -61,15 +61,18 @@ async def get_video_codec(filepath: str) -> str:
 
 
 async def process_completed_download(name: str, save_path: str):
-    """
-    Process completed download:
-    1. Find video files in download location.
-    2. Smart codec check - bypass H.264, queue H.265/AV1/unknown.
-    3. Trigger library scan to update DB.
-    """
+    """Scan library, then queue transcode jobs for incompatible files."""
     print(f"Processing completed download: {name} in {save_path}")
     
-    # 1. Find all video files
+    # 1. Update Library FIRST (so episodes exist in DB)
+    print("Starting library scan to create episodes...")
+    result = await library_scanner.scan_and_import()
+    print(f"Scan complete: imported {result['imported']}, skipped {result['skipped']}")
+    
+    if result['imported'] > 0:
+        print(f"New media imported to DB: {result['imported_items']}")
+    
+    # 2. Find all video files
     full_path = Path(save_path) / name if save_path and name else Path(save_path or "")
     
     video_files = []
@@ -84,32 +87,45 @@ async def process_completed_download(name: str, save_path: str):
     
     print(f"Found {len(video_files)} video files in {full_path}")
     
-    # 2. Evaluate and Queue (Smart Codec Check)
-    for video_path in video_files:
-        path_str = str(video_path)
-        ext = video_path.suffix.lower()
-        
-        # Fast path: known compatible containers
-        if ext in COMPATIBLE_CONTAINERS:
-            print(f"Container OK (bypass): {path_str}")
-            continue
-        
-        # Deep check: probe the actual codec
-        codec = await get_video_codec(path_str)
-        
-        if codec in COMPATIBLE_VIDEO_CODECS:
-            print(f"Codec OK [{codec}] (bypass): {path_str}")
-        else:
-            print(f"Incompatible codec [{codec}] (queueing): {path_str}")
-            await job_worker.add_job(source_path=path_str)
-
-    # 3. Update Library (Database Sync)
-    print("Starting library scan to sync metadata...")
-    result = await library_scanner.scan_and_import()
-    print(f"Scan complete: imported {result['imported']}, skipped {result['skipped']}")
+    # 3. Match videos to episodes and queue transcode jobs
+    from database import async_session_factory
+    from sqlalchemy import select
+    from models import Episode
     
-    if result['imported'] > 0:
-        print(f"New media imported to DB: {result['imported_items']}")
+    async with async_session_factory() as session:
+        for video_path in video_files:
+            path_str = str(video_path)
+            ext = video_path.suffix.lower()
+            
+            # Fast path: known compatible containers
+            if ext in COMPATIBLE_CONTAINERS:
+                print(f"Container OK (bypass): {path_str}")
+                continue
+            
+            # Deep check: probe the actual codec
+            codec = await get_video_codec(path_str)
+            
+            if codec in COMPATIBLE_VIDEO_CODECS:
+                print(f"Codec OK [{codec}] (bypass): {path_str}")
+            else:
+                print(f"Incompatible codec [{codec}] (queueing): {path_str}")
+                
+                # Find matching episode by file_path
+                result = await session.execute(
+                    select(Episode).where(Episode.file_path == path_str)
+                )
+                episode = result.scalars().first()
+                
+                if episode:
+                    print(f"Linked to episode {episode.id}: S{episode.season}E{episode.episode}")
+                    await job_worker.add_job(
+                        source_path=path_str,
+                        episode_id=episode.id,
+                        media_id=episode.media_id
+                    )
+                else:
+                    print(f"No episode match found, adding unlinked job")
+                    await job_worker.add_job(source_path=path_str)
 
 
 # Endpoints

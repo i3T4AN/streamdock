@@ -69,12 +69,29 @@ async def stream_episode(
     - **media_id**: The media ID
     - **episode_id**: The episode ID
     """
+    from sqlalchemy import select
+    from models import TranscodeJob, TranscodeStatus
+    
     episode = await db.get(Episode, episode_id)
     
     if not episode or episode.media_id != media_id:
         raise HTTPException(status_code=404, detail="Episode not found")
     
     file_path = episode.file_path
+    
+    # Check for completed transcode job for this episode
+    result = await db.execute(
+        select(TranscodeJob)
+        .where(TranscodeJob.episode_id == episode_id)
+        .where(TranscodeJob.status == TranscodeStatus.COMPLETE)
+    )
+    transcode_job = result.scalars().first()
+    
+    if transcode_job and transcode_job.output_path:
+        transcoded_path = Path(transcode_job.output_path)
+        if transcoded_path.exists():
+            file_path = str(transcoded_path)
+            print(f"Streaming transcoded: {file_path}")
     
     if not file_path or not Path(file_path).exists():
         raise HTTPException(status_code=404, detail="Episode file not found")

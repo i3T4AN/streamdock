@@ -99,22 +99,12 @@ class VideoInfo:
         }
 
 
-class HWAccel(Enum):
-    """Hardware acceleration types."""
-    NONE = "none"
-    NVENC = "nvenc"      # NVIDIA
-    VAAPI = "vaapi"      # Intel/AMD Linux
-    VIDEOTOOLBOX = "videotoolbox"  # macOS
-    QSV = "qsv"          # Intel Quick Sync
-
-
 class Transcoder:
-    """FFmpeg-based video transcoder."""
+    """FFmpeg-based video transcoder (CPU-only for Docker compatibility)."""
     
     def __init__(self, output_path: str = TRANSCODED_PATH):
         self.output_path = Path(output_path)
         self.output_path.mkdir(parents=True, exist_ok=True)
-        self._hw_accel: Optional[HWAccel] = None
         self.current_process: Optional[asyncio.subprocess.Process] = None
     
     async def get_video_info(self, path: str) -> Optional[VideoInfo]:
@@ -188,47 +178,7 @@ class Transcoder:
         print(f"Needs transcoding: {info.path}")
         return True
     
-    async def detect_hw_accel(self) -> HWAccel:
-        """Detect available hardware acceleration."""
-        
-        if await self._check_encoder("h264_nvenc") and os.path.exists("/dev/nvidia0"):
-            self._hw_accel = HWAccel.NVENC
-            print("Hardware acceleration: NVIDIA NVENC")
-            return self._hw_accel
-        
-        if await self._check_encoder("h264_vaapi") and os.path.exists("/dev/dri/renderD128"):
-            self._hw_accel = HWAccel.VAAPI
-            print("Hardware acceleration: VAAPI")
-            return self._hw_accel
-        
-        if await self._check_encoder("h264_videotoolbox"):
-            self._hw_accel = HWAccel.VIDEOTOOLBOX
-            print("Hardware acceleration: VideoToolbox")
-            return self._hw_accel
-        
-        if await self._check_encoder("h264_qsv"):
-            self._hw_accel = HWAccel.QSV
-            print("Hardware acceleration: Intel Quick Sync")
-            return self._hw_accel
-        
-        self._hw_accel = HWAccel.NONE
-        print("Hardware acceleration: None (using CPU - Optimized)")
-        return self._hw_accel
-    
-    async def _check_encoder(self, encoder: str) -> bool:
-        """Check if encoder is available."""
-        try:
-            cmd = [FFMPEG_PATH, "-hide_banner", "-encoders"]
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            stdout, _ = await proc.communicate()
-            return encoder in stdout.decode()
-        except Exception:
-            return False
-    
+
     async def transcode_to_mp4(
         self,
         source: str,
@@ -245,7 +195,7 @@ class Transcoder:
             source_path = Path(source)
             output = str(self.output_path / f"{source_path.stem}.mp4")
         
-        cmd = await self._build_transcode_cmd(source, output, quality)
+        cmd = self._build_transcode_cmd(source, output, quality)
         
         print(f"Transcoding: {Path(source).name} -> {Path(output).name}")
         
@@ -258,43 +208,35 @@ class Transcoder:
             print(f"Transcode failed: {source}")
             return None
     
-    async def _build_transcode_cmd(
+    def _build_transcode_cmd(
         self,
         source: str,
         output: str,
         quality: QualityPreset
     ) -> list:
-        """Build FFmpeg transcode command."""
+        """Build FFmpeg transcode command (CPU-only with libx264)."""
         settings = QUALITY_SETTINGS[quality]
-        hw_accel = await self.detect_hw_accel()
         
         cmd = [FFMPEG_PATH, "-y", "-hide_banner"]
-        
         cmd.extend(["-i", source])
         
-        if hw_accel == HWAccel.NVENC:
-            cmd.extend(["-c:v", "h264_nvenc", "-preset", "fast"])
-        elif hw_accel == HWAccel.VAAPI:
-            cmd.extend(["-vaapi_device", "/dev/dri/renderD128"])
-            cmd.extend(["-c:v", "h264_vaapi"])
-        elif hw_accel == HWAccel.VIDEOTOOLBOX:
-            cmd.extend(["-c:v", "h264_videotoolbox"])
-        elif hw_accel == HWAccel.QSV:
-            cmd.extend(["-c:v", "h264_qsv", "-preset", "fast"])
-        else:
-            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-crf", str(settings["crf"])])
+        # CPU encoding with libx264 (ultrafast preset for speed)
+        cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-crf", str(settings["crf"])])
         
+        # Scale to target resolution while maintaining aspect ratio
         width, height = settings["resolution"].split("x")
         cmd.extend(["-vf", f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2"])
         
+        # AAC audio
         cmd.extend(["-c:a", "aac", "-b:a", settings["audio_bitrate"]])
         
+        # Fast start for web streaming
         cmd.extend(["-movflags", "+faststart"])
         
+        # Progress output to stdout
         cmd.extend(["-progress", "pipe:1", "-nostdin"])
         
         cmd.append(output)
-        
         return cmd
     
     async def _run_ffmpeg(

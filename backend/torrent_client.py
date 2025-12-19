@@ -154,6 +154,10 @@ class QBitClient:
             self._client.auth_log_in()
             self._connected = True
             print(f"Connected to qBittorrent at {self.host}:{self.port}")
+            
+            # Configure webhook autorun on successful connection
+            self._configure_webhook_autorun()
+            
             return True
         except qbittorrentapi.LoginFailed as e:
             print(f"qBittorrent login failed: {e}")
@@ -163,6 +167,25 @@ class QBitClient:
             print(f"qBittorrent connection error: {e}")
             self._connected = False
             return False
+    
+    def _configure_webhook_autorun(self) -> None:
+        """
+        Configure qBittorrent to run the webhook script on torrent completion.
+        Uses API to set preferences, avoiding config file format issues.
+        """
+        if not self._client:
+            return
+        
+        try:
+            # Set autorun program with properly quoted parameters
+            webhook_cmd = '/config/webhook.sh "%N" "%I" "%D"'
+            self._client.app_set_preferences({
+                "autorun_enabled": True,
+                "autorun_program": webhook_cmd
+            })
+            print(f"Configured webhook autorun: {webhook_cmd}")
+        except Exception as e:
+            print(f"Failed to configure webhook autorun: {e}")
     
     def disconnect(self) -> None:
         """Disconnect from qBittorrent."""

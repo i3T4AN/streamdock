@@ -252,10 +252,13 @@ class LibraryScanner:
         season = info.get("season")
         episode = info.get("episode")
         
-        if season is not None and episode is not None:
+        if episode is not None:
             # Handle episode lists (e.g., S01E01E02)
             if isinstance(episode, list):
                 episode = episode[0]
+            # Default to season 1 if not specified (common for anime naming like "- 01")
+            if season is None:
+                season = 1
             return {
                 "season": int(season),
                 "episode": int(episode),
