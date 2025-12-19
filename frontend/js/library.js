@@ -115,8 +115,8 @@ const Library = {
         grid.querySelectorAll('.media-card').forEach(card => {
             // Play on card click
             card.addEventListener('click', (e) => {
-                // Don't trigger if clicking delete button
-                if (e.target.closest('.media-delete-btn')) return;
+                // Don't trigger if clicking delete or replace button
+                if (e.target.closest('.media-delete-btn') || e.target.closest('.media-replace-btn')) return;
                 const id = card.dataset.id;
                 Player.open(id);
             });
@@ -134,6 +134,19 @@ const Library = {
                 }
             });
         });
+
+        // Bind replace buttons
+        grid.querySelectorAll('.media-replace-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const title = btn.dataset.title;
+
+                if (confirm(`Delete original files for "${title}"? This keeps only the transcoded MP4s.`)) {
+                    await this.replaceOriginals(id);
+                }
+            });
+        });
     },
 
     async deleteMedia(id) {
@@ -147,12 +160,27 @@ const Library = {
         }
     },
 
+    async replaceOriginals(id) {
+        try {
+            const result = await API.post(`/library/${id}/replace-originals`);
+            Toast.success(`Deleted ${result.deleted_count} original file(s)`);
+            this.loadMedia();
+        } catch (error) {
+            console.error('Failed to replace originals:', error);
+            Toast.error('Failed to delete original files');
+        }
+    },
+
     renderCard(item) {
         const poster = item.poster_url || '/images/placeholder.jpg';
         const year = item.year || '';
+        const replaceBtn = item.has_originals
+            ? `<button class="media-replace-btn" data-id="${item.id}" data-title="${item.title}" title="Delete originals (keep MP4s)">⚡</button>`
+            : '';
 
         return `
             <div class="media-card" data-id="${item.id}" data-title="${item.title}">
+                ${replaceBtn}
                 <button class="media-delete-btn" data-id="${item.id}" data-title="${item.title}" title="Delete">×</button>
                 <img src="${poster}" alt="${item.title}" loading="lazy">
                 <div class="media-card-overlay">
