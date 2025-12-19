@@ -86,6 +86,39 @@
   transform: scale(1.1);
 }
 
+/* Replace Button (top left) */
+.media-replace-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.9);
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.media-card:hover .media-replace-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.media-replace-btn:hover {
+  background: rgba(79, 70, 229, 1);
+  transform: scale(1.1);
+}
+
 .media-card:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
