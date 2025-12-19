@@ -13,15 +13,14 @@
 
 **StreamDock** is a fully containerized media platform that combines torrent downloading with a Netflix-style streaming interface. Download media via magnet links, let it automatically fetch metadata and transcode to browser-compatible formats, then stream directly from your browser.
 
-**Ethan You're a Lazy piece of %&^$** I hear you say - Yes I reused the same UI as the [Vector Knowledge Base](https://github.com/i3T4AN/Vector-Knowledge-Base) and my [Portfolio Website](https://i3t4an.github.io/), It saved me like 5 hours on designing, I like the design, and if it **Ain't broke don't fix it ¯\_(ツ)_/¯**
+**Ethan You're a Lazy piece of %&^$** I hear you say - Yes I reused the same UI as the [Vector Knowledge Base](https://github.com/i3T4AN/Vector-Knowledge-Base) and my [Portfolio Website](https://i3t4an.github.io/), It saved me like 5 hours on designing, I like the design, and if it **Ain't broke don't fix it ¯\ _(ツ)_ /¯**
 
 ## Features
 
 - **Netflix-Style Library** - Browse your media collection with auto-fetched posters and metadata from TMDB
 - **Integrated Torrent Manager** - Add magnet links and monitor downloads from the same interface
 - **Browser-Based Playback** - Stream any video format directly in your browser (MKV, AVI, MP4, MOV)
-- **Background Transcoding** - Automatic conversion to browser-compatible MP4 after download
-- **GPU Acceleration** - Hardware encoding support (NVIDIA NVENC, Intel QSV, AMD VAAPI, macOS VideoToolbox)
+- **Background Transcoding** - Automatic conversion to browser-compatible MP4 (CPU-based, no GPU required)
 - **TV Show Support** - Organized by seasons and episodes with automatic detection
 - **Watch Progress Tracking** - Resume playback exactly where you left off
 - **Fully Containerized** - One command deployment with Docker Compose
@@ -64,10 +63,6 @@
    The script will pause if it's your first run. Edit the created `.env` file to add your TMDB API key, then run the start script again.
 
 4. **Access the interface**
-   Navigate to `http://localhost:8000`
-
-5. **Access the interface**
-   
    Navigate to `http://localhost:8000`
 
 > [!TIP]
@@ -177,7 +172,7 @@ Your local IP is automatically detected during `./setup.sh` and stored in `.env`
 | Frontend | Vanilla JavaScript (no build step) |
 | Database | PostgreSQL 15 |
 | Torrents | qBittorrent-nox (linuxserver/qbittorrent) |
-| Transcoding | FFmpeg with hardware acceleration |
+| Transcoding | FFmpeg (CPU-only, libx264) |
 | Metadata | TMDB API |
 | Container | Docker Compose |
 
@@ -187,26 +182,30 @@ Your local IP is automatically detected during `./setup.sh` and stored in `.env`
 /streamdock
 ├── docker-compose.yml      # Container orchestration
 ├── .env                    # Environment configuration
-├── setup.sh                # First-run setup script
+├── start.sh / start.bat    # Startup scripts (Mac/Linux & Windows)
+├── setup.sh / setup.ps1    # First-run setup scripts
 ├── backend/
 │   ├── Dockerfile          # Python container
 │   ├── main.py             # FastAPI entry point
+│   ├── database.py         # Database connection & sessions
 │   ├── models.py           # SQLAlchemy models
 │   ├── routes_*.py         # API endpoints
-│   ├── transcoder.py       # FFmpeg wrapper
+│   ├── transcoder.py       # FFmpeg wrapper (CPU-only)
+│   ├── streamer.py         # Video streaming with range support
 │   ├── job_worker.py       # Background job processor
+│   ├── scheduler.py        # Scheduled task runner
 │   ├── library_scanner.py  # Media detection & TMDB matching
 │   ├── tmdb_client.py      # TMDB API integration
 │   └── torrent_client.py   # qBittorrent API wrapper
 ├── frontend/
 │   ├── index.html          # Library view
 │   ├── downloads.html      # Torrent & transcode management
-│   ├── settings.html       # Configuration
-│   ├── player.html         # Video player
+│   ├── settings.html       # Configuration & QR code access
 │   ├── css/                # Stylesheets
 │   └── js/                 # JavaScript modules
 └── config/
     ├── qBittorrent.conf    # qBittorrent settings
+    ├── qbittorrent-init.sh # Container initialization
     └── webhook.sh          # Download completion webhook
 ```
 
@@ -284,19 +283,18 @@ QBIT_PASSWORD=adminadmin
 
 # Application Secret
 SECRET_KEY=your_secret_key
+
+# Network Access (auto-detected by setup script)
+SERVER_IP=
 ```
 
 ### Transcoding Settings
 
-The transcoder automatically detects available hardware acceleration:
+The transcoder uses CPU-based encoding for maximum Docker compatibility:
 
-| Hardware | Encoder | Detection |
-|----------|---------|-----------|
-| NVIDIA GPU | h264_nvenc | `/dev/nvidia0` |
-| Intel (Linux) | h264_vaapi | `/dev/dri/renderD128` |
-| Intel Quick Sync | h264_qsv | Encoder available |
-| macOS | h264_videotoolbox | Encoder available |
-| CPU Fallback | libx264 (ultrafast) | Always available |
+| Encoder | Preset | Notes |
+|---------|--------|---------|
+| libx264 | ultrafast | Fast encoding, universal compatibility |
 
 ### File Extension Handling
 
