@@ -282,29 +282,6 @@ class LibraryScanner:
         return episodes
     
     # TMDB Matching
-    def _title_similarity(self, title1: str, title2: str) -> float:
-        """Calculate simple title similarity (0.0 to 1.0)."""
-        t1 = title1.lower().strip()
-        t2 = title2.lower().strip()
-        
-        # Exact match
-        if t1 == t2:
-            return 1.0
-        
-        # Check if one contains the other
-        if t1 in t2 or t2 in t1:
-            return 0.8
-        
-        # Word overlap
-        words1 = set(t1.split())
-        words2 = set(t2.split())
-        if not words1 or not words2:
-            return 0.0
-        
-        overlap = len(words1 & words2)
-        total = len(words1 | words2)
-        return overlap / total if total > 0 else 0.0
-    
     async def match_with_tmdb(
         self,
         title: str,
@@ -312,11 +289,8 @@ class LibraryScanner:
         media_type: str
     ) -> Optional[MediaResult]:
         """
-        Match title with TMDB. Only return if confident match.
-        Will return None if no good match found - better to show nothing than wrong data.
+        Match title with TMDB. Trust TMDB's result - if it returns something, use it.
         """
-        MIN_SIMILARITY = 0.5  # Require at least 50% title similarity
-        
         try:
             if media_type == "movie":
                 results = await tmdb_client.search_movie(title, year)
@@ -324,17 +298,10 @@ class LibraryScanner:
                 results = await tmdb_client.search_tv(title, year)
             
             if results:
-                # Check first result for similarity
                 best = results[0]
-                similarity = self._title_similarity(title, best.title)
-                
-                if similarity >= MIN_SIMILARITY:
-                    print(f"TMDB match: '{title}' -> '{best.title}' (similarity: {similarity:.2f})")
-                    return best
-                else:
-                    print(f"TMDB no confident match for '{title}' (best: '{best.title}', similarity: {similarity:.2f})")
+                print(f"TMDB match: '{title}' -> '{best.title}'")
+                return best
             
-            # Don't do fallback guessing - if we can't find a good match, return None
             return None
             
         except Exception as e:
