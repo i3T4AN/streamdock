@@ -23,7 +23,6 @@ class DownloadCompleteRequest(BaseModel):
 
 
 # Background Tasks
-import os
 import asyncio
 from pathlib import Path
 from job_worker import job_worker
@@ -32,8 +31,6 @@ from job_worker import job_worker
 COMPATIBLE_VIDEO_CODECS = {'h264', 'vp8', 'vp9', 'av1'}
 # Compatible container formats (fast path - skip ffprobe)
 COMPATIBLE_CONTAINERS = {'.mp4', '.mov', '.webm'}
-# All video extensions we care about
-VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v', '.wmv'}
 
 
 async def get_video_codec(filepath: str) -> str:
@@ -72,30 +69,32 @@ async def process_completed_download(name: str, save_path: str):
     if result['imported'] > 0:
         print(f"New media imported to DB: {result['imported_items']}")
     
-    # 2. Find all video files
-    full_path = Path(save_path) / name if save_path and name else Path(save_path or "")
-    
-    video_files = []
-    if full_path.is_file():
-        if full_path.suffix.lower() in VIDEO_EXTENSIONS:
-            video_files.append(full_path)
-    elif full_path.is_dir():
-        for root, _, files in os.walk(full_path):
-            for f in files:
-                if Path(f).suffix.lower() in VIDEO_EXTENSIONS:
-                    video_files.append(Path(root) / f)
-    
-    print(f"Found {len(video_files)} video files in {full_path}")
-    
-    # 3. Match videos to episodes and queue transcode jobs
+    # 2. Query DB for episodes needing transcode (instead of using webhook path which may be stale)
     from database import async_session_factory
-    from sqlalchemy import select
+    from sqlalchemy import select, or_
     from models import Episode
     
     async with async_session_factory() as session:
-        for video_path in video_files:
-            path_str = str(video_path)
-            ext = video_path.suffix.lower()
+        # Find episodes with incompatible containers
+        incompatible_exts = ('.mkv', '.avi', '.wmv', '.m4v')
+        ext_conditions = [Episode.file_path.ilike(f'%{ext}') for ext in incompatible_exts]
+        
+        result = await session.execute(
+            select(Episode).where(or_(*ext_conditions))
+        )
+        episodes = result.scalars().all()
+        
+        print(f"Found {len(episodes)} episodes needing transcode check (from DB)")
+        
+        # 3. Check each episode and queue transcode jobs
+        for episode in episodes:
+            path_str = episode.file_path
+            ext = Path(path_str).suffix.lower()
+            
+            # Verify file exists
+            if not Path(path_str).exists():
+                print(f"File not found (skipping): {path_str}")
+                continue
             
             # Fast path: known compatible containers
             if ext in COMPATIBLE_CONTAINERS:
@@ -109,23 +108,12 @@ async def process_completed_download(name: str, save_path: str):
                 print(f"Codec OK [{codec}] (bypass): {path_str}")
             else:
                 print(f"Incompatible codec [{codec}] (queueing): {path_str}")
-                
-                # Find matching episode by file_path
-                result = await session.execute(
-                    select(Episode).where(Episode.file_path == path_str)
+                print(f"Linked to episode {episode.id}: S{episode.season}E{episode.episode}")
+                await job_worker.add_job(
+                    source_path=path_str,
+                    episode_id=episode.id,
+                    media_id=episode.media_id
                 )
-                episode = result.scalars().first()
-                
-                if episode:
-                    print(f"Linked to episode {episode.id}: S{episode.season}E{episode.episode}")
-                    await job_worker.add_job(
-                        source_path=path_str,
-                        episode_id=episode.id,
-                        media_id=episode.media_id
-                    )
-                else:
-                    print(f"No episode match found, adding unlinked job")
-                    await job_worker.add_job(source_path=path_str)
 
 
 # Endpoints
